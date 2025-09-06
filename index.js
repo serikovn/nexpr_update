@@ -115,7 +115,28 @@ bot.on('callback_query', async (query) => {
     const chatId = query.message.chat.id;
     const data = query.data;
 
-    if (data.startsWith('direction_')) {
+    if (data === 'show_all_problems') {
+        const problems = await loadProblems();
+        const currentDate = formatDate();
+        
+        if (problems.length === 0) {
+            await bot.sendMessage(chatId, `На ${currentDate} Ночной Экспресс двигается в штатном режиме.`);
+        } else {
+            const keyboard = {
+                inline_keyboard: problems.map(problem => [{
+                    text: problem.name,
+                    callback_data: `direction_${problem.name}`
+                }])
+            };
+
+            await bot.sendMessage(
+                chatId,
+                `На ${currentDate} задержки в перевозках Ночного Экспресса зафиксированы на следующих направлениях.\n\nВыберите направление, чтобы узнать подробности:`,
+                { reply_markup: keyboard }
+            );
+        }
+        await bot.answerCallbackQuery(query.id);
+    } else if (data.startsWith('direction_')) {
         const directionName = data.replace('direction_', '');
         const problems = await loadProblems();
         const problem = problems.find(p => p.name === directionName);
@@ -158,6 +179,10 @@ bot.on('callback_query', async (query) => {
                     {
                         text: isSubscribed ? '✅ Вы подписаны' : '🔔 Подписаться на обновления',
                         callback_data: isSubscribed ? `unsubscribe_${directionName}` : `subscribe_${directionName}`
+                    },
+                    {
+                        text: '📋 Показать все форс-мажоры',
+                        callback_data: 'show_all_problems'
                     }
                 ]]
             };
@@ -187,6 +212,10 @@ bot.on('callback_query', async (query) => {
                     {
                         text: '✅ Вы подписаны',
                         callback_data: `unsubscribe_${directionName}`
+                    },
+                    {
+                        text: '📋 Показать все форс-мажоры',
+                        callback_data: 'show_all_problems'
                     }
                 ]]
             };
@@ -212,6 +241,10 @@ bot.on('callback_query', async (query) => {
                     {
                         text: '🔔 Подписаться на обновления',
                         callback_data: `subscribe_${directionName}`
+                    },
+                    {
+                        text: '📋 Показать все форс-мажоры',
+                        callback_data: 'show_all_problems'
                     }
                 ]]
             };
