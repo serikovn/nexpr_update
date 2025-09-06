@@ -1,0 +1,24 @@
+[
+  {
+    "name": "Братское",
+    "media": [
+      {
+        "type": "photo",
+        "file": "AgACAgIAAxkBAAMvaLswJINMnbnkf0pYtqGwUnLpreoAAvH_MRtE2NlJE5MKi8EcQoEBAAMCAAN4AAM2BA"
+      }
+    ],
+    "description": "Столкнулись два камаза, заблокировали дорогу",
+    "eta": "3 часа"
+  },
+  {
+    "name": "Красноярское",
+    "media": [
+      {
+        "type": "photo",
+        "file": "AgACAgIAAxkBAANVaLuplq-l-7q5yK1osyj7TwY7mnoAAgEJMhtE2NlJAtrV_V4vHqQBAAMCAAN4AAM2BA"
+      }
+    ],
+    "description": "Переезд не работает с 8 утра",
+    "eta": "6 сентября, 13:00"
+  }
+]
