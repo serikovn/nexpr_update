@@ -8,8 +8,10 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 const ADMINS = [1355294435];
 
 const PROBLEMS_FILE = path.join(__dirname, 'problems.json');
+const SUBSCRIBERS_FILE = path.join(__dirname, 'subscribers.json');
 
 const adminStates = {};
+const routeSubscribers = {};
 
 async function loadProblems() {
     try {
@@ -26,6 +28,23 @@ async function loadProblems() {
 
 async function saveProblems(problems) {
     await fs.writeFile(PROBLEMS_FILE, JSON.stringify(problems, null, 2));
+}
+
+async function loadSubscribers() {
+    try {
+        const data = await fs.readFile(SUBSCRIBERS_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            await saveSubscribers({});
+            return {};
+        }
+        throw error;
+    }
+}
+
+async function saveSubscribers(subscribers) {
+    await fs.writeFile(SUBSCRIBERS_FILE, JSON.stringify(subscribers, null, 2));
 }
 
 function formatDate(date = new Date()) {
@@ -104,10 +123,77 @@ bot.on('callback_query', async (query) => {
 
             const formattedEta = problem.eta;
             const description = `${problem.name}: ${problem.description}, прогноз устранения — ${formattedEta}.`;
-            await bot.sendMessage(chatId, description);
+            
+            const subscribers = await loadSubscribers();
+            const isSubscribed = subscribers[directionName]?.includes(query.from.id);
+            
+            const keyboard = {
+                inline_keyboard: [[
+                    {
+                        text: isSubscribed ? '✅ Вы подписаны' : '🔔 Подписаться на обновления',
+                        callback_data: isSubscribed ? `unsubscribe_${directionName}` : `subscribe_${directionName}`
+                    }
+                ]]
+            };
+            
+            await bot.sendMessage(chatId, description, { reply_markup: keyboard });
         }
 
         await bot.answerCallbackQuery(query.id);
+    } else if (data.startsWith('subscribe_')) {
+        const directionName = data.replace('subscribe_', '');
+        const subscribers = await loadSubscribers();
+        
+        if (!subscribers[directionName]) {
+            subscribers[directionName] = [];
+        }
+        
+        if (!subscribers[directionName].includes(query.from.id)) {
+            subscribers[directionName].push(query.from.id);
+            await saveSubscribers(subscribers);
+            await bot.answerCallbackQuery(query.id, {
+                text: '✅ Вы подписались на обновления по этому маршруту',
+                show_alert: true
+            });
+            
+            const keyboard = {
+                inline_keyboard: [[
+                    {
+                        text: '✅ Вы подписаны',
+                        callback_data: `unsubscribe_${directionName}`
+                    }
+                ]]
+            };
+            await bot.editMessageReplyMarkup(keyboard, {
+                chat_id: query.message.chat.id,
+                message_id: query.message.message_id
+            });
+        }
+    } else if (data.startsWith('unsubscribe_')) {
+        const directionName = data.replace('unsubscribe_', '');
+        const subscribers = await loadSubscribers();
+        
+        if (subscribers[directionName]) {
+            subscribers[directionName] = subscribers[directionName].filter(id => id !== query.from.id);
+            await saveSubscribers(subscribers);
+            await bot.answerCallbackQuery(query.id, {
+                text: '🔕 Вы отписались от обновлений',
+                show_alert: true
+            });
+            
+            const keyboard = {
+                inline_keyboard: [[
+                    {
+                        text: '🔔 Подписаться на обновления',
+                        callback_data: `subscribe_${directionName}`
+                    }
+                ]]
+            };
+            await bot.editMessageReplyMarkup(keyboard, {
+                chat_id: query.message.chat.id,
+                message_id: query.message.message_id
+            });
+        }
     }
 });
 
@@ -144,6 +230,46 @@ bot.onText(/\/remove/, async (msg) => {
     };
 
     await bot.sendMessage(chatId, 'Выберите проблему для удаления:', { reply_markup: keyboard });
+});
+
+bot.onText(/\/resolve (.+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const problemName = match[1];
+
+    if (!isAdmin(userId)) {
+        return bot.sendMessage(chatId, 'У вас нет прав для выполнения этой команды.');
+    }
+
+    const problems = await loadProblems();
+    const problemIndex = problems.findIndex(p => p.name === problemName);
+    
+    if (problemIndex === -1) {
+        return bot.sendMessage(chatId, `❌ Проблема "${problemName}" не найдена.`);
+    }
+
+    const subscribers = await loadSubscribers();
+    const subscriberList = subscribers[problemName] || [];
+    
+    if (subscriberList.length > 0) {
+        const notificationMessage = `✅ Проблема на направлении «${problemName}» решена. Машины Ночного Экспресса снова идут по графику!`;
+        
+        for (const subscriberId of subscriberList) {
+            try {
+                await bot.sendMessage(subscriberId, notificationMessage);
+            } catch (error) {
+                console.error(`Не удалось отправить уведомление пользователю ${subscriberId}:`, error);
+            }
+        }
+        
+        delete subscribers[problemName];
+        await saveSubscribers(subscribers);
+    }
+    
+    problems.splice(problemIndex, 1);
+    await saveProblems(problems);
+    
+    await bot.sendMessage(chatId, `✅ Проблема "${problemName}" решена и удалена.\n📨 Уведомлено подписчиков: ${subscriberList.length}`);
 });
 
 bot.onText(/\/list/, async (msg) => {
