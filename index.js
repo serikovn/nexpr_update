@@ -9,6 +9,7 @@ const ADMINS = [1355294435];
 
 const PROBLEMS_FILE = path.join(__dirname, 'problems.json');
 const SUBSCRIBERS_FILE = path.join(__dirname, 'subscribers.json');
+const USERS_FILE = path.join(__dirname, 'users.json');
 
 const adminStates = {};
 const routeSubscribers = {};
@@ -47,6 +48,23 @@ async function saveSubscribers(subscribers) {
     await fs.writeFile(SUBSCRIBERS_FILE, JSON.stringify(subscribers, null, 2));
 }
 
+async function loadUsers() {
+    try {
+        const data = await fs.readFile(USERS_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            await saveUsers([]);
+            return [];
+        }
+        throw error;
+    }
+}
+
+async function saveUsers(users) {
+    await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
+}
+
 function formatDate(date = new Date()) {
     const moscowDate = new Date(date.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
     const options = {
@@ -64,8 +82,16 @@ function isAdmin(userId) {
 
 bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
+    const userId = msg.from.id;
     const problems = await loadProblems();
     const currentDate = formatDate();
+    
+    // Сохраняем пользователя
+    const users = await loadUsers();
+    if (!users.includes(userId)) {
+        users.push(userId);
+        await saveUsers(users);
+    }
 
     if (problems.length === 0) {
         await bot.sendMessage(chatId, `На ${currentDate} Ночной Экспресс двигается в штатном режиме.`);
@@ -354,9 +380,25 @@ bot.on('message', async (msg) => {
             case 'media':
                 if (text && (text.toLowerCase() === 'готово' || text.toLowerCase() === 'done')) {
                     const problems = await loadProblems();
-                    problems.push(adminStates[userId].problem);
+                    const newProblem = adminStates[userId].problem;
+                    problems.push(newProblem);
                     await saveProblems(problems);
-                    await bot.sendMessage(chatId, `✅ Проблема "${adminStates[userId].problem.name}" добавлена.`);
+                    
+                    // Отправляем уведомление всем пользователям
+                    const users = await loadUsers();
+                    const notificationMessage = `⚠️ Новая задержка на маршруте!\n\n📍 Направление: ${newProblem.name}\n📝 Описание: ${newProblem.description}\n⏰ Прогноз устранения: ${newProblem.eta}\n\nДля подробностей используйте команду /start`;
+                    
+                    for (const recipientId of users) {
+                        if (recipientId !== userId) { // Не отправляем админу, который добавил
+                            try {
+                                await bot.sendMessage(recipientId, notificationMessage);
+                            } catch (error) {
+                                console.error(`Не удалось отправить уведомление пользователю ${recipientId}:`, error);
+                            }
+                        }
+                    }
+                    
+                    await bot.sendMessage(chatId, `✅ Проблема "${newProblem.name}" добавлена.\n📨 Уведомления отправлены ${users.length - 1} пользователям.`);
                     delete adminStates[userId];
                 } else if (text) {
                     if (text.startsWith('http://') || text.startsWith('https://')) {
