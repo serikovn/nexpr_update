@@ -175,16 +175,16 @@ bot.on('callback_query', async (query) => {
             const isSubscribed = subscribers[directionName]?.includes(query.from.id);
             
             const keyboard = {
-                inline_keyboard: [[
-                    {
+                inline_keyboard: [
+                    [{
                         text: isSubscribed ? '✅ Вы подписаны' : '🔔 Подписаться на обновления',
                         callback_data: isSubscribed ? `unsubscribe_${directionName}` : `subscribe_${directionName}`
-                    },
-                    {
+                    }],
+                    [{
                         text: '📋 Показать все форс-мажоры',
                         callback_data: 'show_all_problems'
-                    }
-                ]]
+                    }]
+                ]
             };
             
             await bot.sendMessage(chatId, description, { reply_markup: keyboard });
@@ -208,16 +208,16 @@ bot.on('callback_query', async (query) => {
             });
             
             const keyboard = {
-                inline_keyboard: [[
-                    {
+                inline_keyboard: [
+                    [{
                         text: '✅ Вы подписаны',
                         callback_data: `unsubscribe_${directionName}`
-                    },
-                    {
+                    }],
+                    [{
                         text: '📋 Показать все форс-мажоры',
                         callback_data: 'show_all_problems'
-                    }
-                ]]
+                    }]
+                ]
             };
             await bot.editMessageReplyMarkup(keyboard, {
                 chat_id: query.message.chat.id,
@@ -237,16 +237,16 @@ bot.on('callback_query', async (query) => {
             });
             
             const keyboard = {
-                inline_keyboard: [[
-                    {
+                inline_keyboard: [
+                    [{
                         text: '🔔 Подписаться на обновления',
                         callback_data: `subscribe_${directionName}`
-                    },
-                    {
+                    }],
+                    [{
                         text: '📋 Показать все форс-мажоры',
                         callback_data: 'show_all_problems'
-                    }
-                ]]
+                    }]
+                ]
             };
             await bot.editMessageReplyMarkup(keyboard, {
                 chat_id: query.message.chat.id,
