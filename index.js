@@ -94,7 +94,7 @@ bot.onText(/\/start/, async (msg) => {
     }
 
     if (problems.length === 0) {
-        await bot.sendMessage(chatId, `На ${currentDate} Ночной Экспресс двигается в штатном режиме.`);
+        await bot.sendMessage(chatId, `На ${currentDate} Ночной Экспресс работает в штатном режиме.`);
     } else {
         const keyboard = {
             inline_keyboard: problems.map(problem => [{
@@ -120,7 +120,7 @@ bot.on('callback_query', async (query) => {
         const currentDate = formatDate();
         
         if (problems.length === 0) {
-            await bot.sendMessage(chatId, `На ${currentDate} Ночной Экспресс двигается в штатном режиме.`);
+            await bot.sendMessage(chatId, `На ${currentDate} Ночной Экспресс работает в штатном режиме.`);
         } else {
             const keyboard = {
                 inline_keyboard: problems.map(problem => [{
@@ -177,7 +177,7 @@ bot.on('callback_query', async (query) => {
             const keyboard = {
                 inline_keyboard: [
                     [{
-                        text: isSubscribed ? '✅ Вы подписаны' : '🔔 Подписаться на обновления',
+                        text: isSubscribed ? '✅ Вы подписаны' : '🔔 Подписаться на уведомления',
                         callback_data: isSubscribed ? `unsubscribe_${directionName}` : `subscribe_${directionName}`
                     }],
                     [{
@@ -239,7 +239,7 @@ bot.on('callback_query', async (query) => {
             const keyboard = {
                 inline_keyboard: [
                     [{
-                        text: '🔔 Подписаться на обновления',
+                        text: '🔔 Подписаться на уведомления',
                         callback_data: `subscribe_${directionName}`
                     }],
                     [{
