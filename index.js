@@ -5,7 +5,7 @@ const path = require('path');
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
-const ADMINS = [1355294435];
+const ADMINS = [1355294435, 448751130];
 
 const PROBLEMS_FILE = path.join(__dirname, 'problems.json');
 const SUBSCRIBERS_FILE = path.join(__dirname, 'subscribers.json');
